@@ -1,179 +1,45 @@
-# Credit Risk Classification Model
+# Dataset: Lending Club loans (early 2018)
 
-## Project overview
+## File
 
-This project develops a machine-learning model that classifies Lending Club loan applicants into two groups:
+`lending_club_raw.csv`: 10,000 rows (one per loan) and 55 columns.
 
-- **Prime:** grades A–C
-- **Higher risk:** grades D–G
+## Source
 
-The model uses information available at the time of application, such as income, debt-to-income ratio, credit history, loan amount, loan term, and loan purpose. The goal is to provide a second-opinion risk signal that helps a lending team identify applications that may require additional review.
+Loan data from Lending Club, a peer-to-peer lending platform, for loans issued from January to March 2018. This file matches the public `loans_full_schema` dataset distributed by OpenIntro:
+https://www.openintro.org/data/index.php?data=loans_full_schema
 
-The project focuses on model comparison, data leakage prevention, feature engineering, and business costs. It does not predict loan default directly and should not be used as an automated lending decision without additional validation.
+OpenIntro datasets are shared under the Creative Commons Attribution-ShareAlike 3.0 license.
 
-## Business question
+## What the columns contain
 
-Can application-time borrower information predict whether Lending Club will assign a higher-risk grade, and which classification model provides the most reliable second-opinion signal?
+| Group | Example columns |
+|---|---|
+| Applicant | `emp_title`, `emp_length`, `state`, `homeownership`, `annual_income`, `verified_income`, `debt_to_income` |
+| Joint applications | `annual_income_joint`, `verification_income_joint`, `debt_to_income_joint` |
+| Credit history | `earliest_credit_line`, `delinq_2y`, `inquiries_last_12m`, `total_credit_limit`, `total_debit_limit`, `num_open_cc_accounts` |
+| Loan request | `loan_purpose`, `application_type`, `loan_amount`, `term` |
+| Lending Club decision | `grade`, `sub_grade`, `interest_rate`, `installment` |
+| After the loan was issued | `issue_month`, `loan_status`, `balance`, `paid_total`, `paid_principal`, `paid_interest`, `paid_late_fees` |
 
-## Dataset
+## Target variable
 
-The dataset contains 10,000 Lending Club loan records from early 2018. The target variable is engineered from the original `grade` column:
-
-```text
-risky_grade = 1 if grade is D, E, F, or G
-risky_grade = 0 if grade is A, B, or C
-```
-
-The dataset is imbalanced. Approximately 81.5% of loans are prime and 18.5% are classified as higher risk. Because of this imbalance, accuracy alone is not sufficient for evaluating the models.
-
-The dataset is included in this repository at `data/lending_club_raw.csv`. See `data/README.md` for its source, contents, and how the target was built.
-
-## Modeling workflow
-
-1. Load and inspect the raw loan data.
-2. Create the binary `risky_grade` target.
-3. Remove data-leakage and post-origination variables.
-4. Handle missing values and high-cardinality fields.
-5. Create additional features:
-   - `loan_to_income`
-   - `credit_history_years`
-   - `credit_utilization_rate`
-6. Split the data into training and test sets using an 80/20 stratified split.
-7. Impute, scale, and encode features inside scikit-learn pipelines.
-8. Train and compare four classification models.
-9. Evaluate performance using accuracy, precision, recall, F1, and ROC-AUC.
-10. Select a classification threshold using an asymmetric business-cost analysis.
-
-## Data leakage prevention
-
-Several fields were excluded because they either reveal the target directly or would not be available when an application is evaluated. These include:
-
-- `grade` and `sub_grade`
-- `interest_rate` and `installment`
-- `loan_status`
-- payment and balance fields recorded after origination
-- other approval or post-origination fields
-
-Removing these variables helps make the evaluation more realistic and prevents the model from learning information it would not have at prediction time.
-
-## Models compared
-
-- Logistic Regression
-- Decision Tree
-- Neural Network
-- Random Forest
-
-Each model uses the same preprocessing approach so the comparison is consistent. The preprocessing pipeline includes median imputation for numeric variables, most-frequent imputation for categorical variables, standardization of numeric variables, and one-hot encoding of categorical variables.
-
-## Results
-
-| Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
-|---|---:|---:|---:|---:|---:|
-| Logistic Regression | 0.8240 | 0.5634 | 0.2162 | 0.3125 | 0.7711 |
-| Decision Tree | 0.8070 | 0.4403 | 0.1595 | 0.2341 | 0.7219 |
-| Neural Network | 0.7835 | 0.3994 | 0.3378 | 0.3660 | 0.7112 |
-| Random Forest | 0.8270 | 0.6765 | 0.1243 | 0.2100 | 0.7877 |
-
-### Recommended model
-
-Logistic Regression is recommended as the second-opinion model because it generalizes more consistently from the training data to the test data. It achieved the best test F1 score and test recall among the four models, while the Neural Network and Random Forest showed substantially larger train-to-test performance gaps.
-
-Random Forest achieved the highest test ROC-AUC, but its test F1 and recall were lower than Logistic Regression. For this business problem, identifying more higher-risk applications and maintaining reliable performance on unseen data are more important than maximizing one threshold-independent ranking metric.
-
-## Business-cost analysis
-
-Missing a higher-risk borrower is assumed to cost approximately 10 times more than incorrectly flagging a prime borrower. The threshold analysis therefore uses:
+The model predicts whether Lending Club assigned a higher-risk grade:
 
 ```text
-Total cost = false positives × 1 + false negatives × 10
+risky_grade = 1 if grade is D, E, F, or G   (1,851 loans, 18.5%)
+risky_grade = 0 if grade is A, B, or C      (8,149 loans, 81.5%)
 ```
 
-At the default 0.50 threshold:
+## Columns excluded from the model
 
-- Recall: 21.6%
-- False negatives: 290
-- Estimated cost: 2,962 units
+To avoid data leakage, the model only uses information available when someone applies. The notebook removes:
 
-At the selected 0.10 threshold:
+- `grade` and `sub_grade` (they define the target)
+- `interest_rate` and `installment` (set by Lending Club based on the grade)
+- `loan_status`, `balance`, and the `paid_*` columns (only known after the loan is issued)
 
-- Recall: 85.9%
-- Precision: 27.4%
-- False negatives: 52
-- Estimated cost: 1,362 units
+## Notes
 
-The recommended operating approach is to use the Logistic Regression model as a prescreening tool. Applications above the 0.10 probability threshold should receive manual review rather than automatic rejection. This threshold should be recalibrated with current data and verified business costs before any operational use.
-
-## Most influential features
-
-The five features with the largest absolute standardized Logistic Regression coefficients were:
-
-1. `term`
-2. `verified_income_Verified`
-3. `total_debit_limit`
-4. `num_open_cc_accounts`
-5. `credit_utilization_rate`
-
-These features describe loan duration, income verification, available credit, open credit accounts, and the proportion of available credit currently being used. Feature importance indicates association with the model output, not causation.
-
-## Repository structure
-
-```text
-credit-risk-classification-model/
-├── README.md                          # project overview (this file)
-├── credit_risk_classification.ipynb   # full analysis and models
-├── requirements.txt                   # Python packages needed
-├── data/
-│   ├── README.md                      # dataset source and description
-│   └── lending_club_raw.csv           # 10,000 loan records
-└── docs/
-    ├── memo.pdf                       # business memo and recommendation
-    └── concept_reflection.pdf         # concept reflection
-```
-
-## How to run the project
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/julixlyz08/credit-risk-classification-model.git
-cd credit-risk-classification-model
-```
-
-### 2. Install the dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Launch the notebook
-
-The dataset is already in the `data` folder, so no download is needed.
-
-```bash
-jupyter notebook credit_risk_classification.ipynb
-```
-
-Run the notebook from beginning to end to reproduce the exploratory analysis, preprocessing, model comparison, threshold analysis, and feature interpretation.
-
-## Limitations
-
-- The dataset represents loans from early 2018 and may not reflect current borrower behavior or economic conditions.
-- The target represents Lending Club's assigned grade category, not actual loan default.
-- The model uses a single train/test split rather than a full production validation process.
-- The 0.10 threshold depends on the assumed 10:1 cost ratio and should be recalibrated with verified business costs.
-- The model should support human review rather than make automatic lending decisions.
-- Fair-lending, explainability, stability, and regulatory validation would be required before deployment.
-
-## Future improvements
-
-- Validate the model on a later time period to measure performance drift.
-- Add cross-validation and probability calibration.
-- Evaluate fairness across relevant borrower groups.
-- Monitor recall, precision, and cost after deployment.
-- Compare the model with a current lending benchmark.
-- Build an interactive monitoring dashboard.
-
-## Authors
-
-Julie Loyez and Hannah Rika-Villasis  
-Team capstone project, MS in Business Analytics, California State University, Northridge
+- Loans are from early 2018, so patterns may not reflect current borrowers or economic conditions.
+- `grade` is Lending Club's own risk rating, not an actual default outcome.
