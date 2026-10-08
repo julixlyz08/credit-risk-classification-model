@@ -26,7 +26,7 @@ risky_grade = 0 if grade is A, B, or C
 
 The dataset is imbalanced. Approximately 81.5% of loans are prime and 18.5% are classified as higher risk. Because of this imbalance, accuracy alone is not sufficient for evaluating the models.
 
-The raw borrower-level dataset is not included in the public repository. See `data/README.md` for information about the data source and setup requirements.
+The dataset is included in this repository at `data/lending_club_raw.csv`. See `data/README.md` for its source, contents, and how the target was built.
 
 ## Modeling workflow
 
@@ -119,13 +119,15 @@ These features describe loan duration, income verification, available credit, op
 
 ```text
 credit-risk-classification-model/
-├── README.md
-├── credit_risk_classification.ipynb
-├── requirements.txt
+├── README.md                          # project overview (this file)
+├── credit_risk_classification.ipynb   # full analysis and models
+├── requirements.txt                   # Python packages needed
 ├── data/
-│   └── README.md
+│   ├── README.md                      # dataset source and description
+│   └── lending_club_raw.csv           # 10,000 loan records
 └── docs/
-    └── memo.pdf
+    ├── memo.pdf                       # business memo and recommendation
+    └── concept_reflection.pdf         # concept reflection
 ```
 
 ## How to run the project
@@ -133,7 +135,7 @@ credit-risk-classification-model/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/credit-risk-classification-model.git
+git clone https://github.com/julixlyz08/credit-risk-classification-model.git
 cd credit-risk-classification-model
 ```
 
@@ -143,17 +145,9 @@ cd credit-risk-classification-model
 pip install -r requirements.txt
 ```
 
-### 3. Add the dataset
+### 3. Launch the notebook
 
-Place the dataset at:
-
-```text
-data/lending_club_raw.csv
-```
-
-The notebook expects the CSV to be located in the `data` folder.
-
-### 4. Launch the notebook
+The dataset is already in the `data` folder, so no download is needed.
 
 ```bash
 jupyter notebook credit_risk_classification.ipynb
@@ -179,7 +173,7 @@ Run the notebook from beginning to end to reproduce the exploratory analysis, pr
 - Compare the model with a current lending benchmark.
 - Build an interactive monitoring dashboard.
 
-## Author
+## Authors
 
-Julie Loyez  
-MS in Business Analytics student
+Julie Loyez and Hannah Rika-Villasis  
+Team capstone project, MS in Business Analytics, California State University, Northridge
